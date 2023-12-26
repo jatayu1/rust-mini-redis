@@ -17,14 +17,37 @@ async fn main() {
 }
 
 async fn process(socket: TcpStream) {
-    // The `Connection` let us read/write redis **frames**.
+    use mini_redis::Command::{self, Get, Set};
+    use std::collections::HashMap;
+
+    // A hashmap is used to store data
+    let mut db = HashMap::new();
+
+    // Connection, provided by `mini-redis`, handles parsing frames the socket
     let mut connection = Connection::new(socket);
 
-    if let Some(frame) = connection.read_frame().await.unwrap() {
-        println!("GOT: {:?}", frame);
+    // Use `read_frame` to recive a command from the connection.
+    while let Some(frame) = connection.read_frame().await.unwrap(){
+        let response = match Command::from_frame(frame).unwrap() {
+            Set(cmd) => {
+                //The value is stored as `Vec<u8>`
+                db.insert(cmd.key().to_string(), cmd.value().to_vec());
+                Frame::Simple("OK".to_string())
+            }
+            Get(cmd) => {
+                if let Some(value) = db.get(cmd.key()){
+                    // `Frame::Bulk` expects data to be of type `Bytes`.
+                    // `&Vec<u8>` is converted to `Bytes` uising `into()`.
+                    Frame::Bulk(value.clone().into())
+                } else {
+                    Frame::Null
+                }
+            }
+            cmd => {
+                panic!("unimplemented {:?}", cmd)
+            }
+        };
 
-        //respond with error
-        let response = Frame::Error("unimplemented".to_string());
         connection.write_frame(&response).await.unwrap();
     }
 }

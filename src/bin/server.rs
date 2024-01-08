@@ -24,7 +24,7 @@ async fn main() {
         
         tokio::spawn(async move {
             process(socket, db).await;
-        });  
+        });
     }
 }
 

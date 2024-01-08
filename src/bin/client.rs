@@ -50,15 +50,11 @@ async fn main() {
         println!("GOT = {:?}", res);
     });
 
-    // while let Some(message) = rx.recv().await {
-    //     println!("GOT = {}", message);
-    // }
-
     let manager = tokio::spawn(async move {
         //Establish a connection to the server 
         let mut client = client::connect("127.0.0.1:6379").await.unwrap();
 
-        // Start receivind messages
+        // Start receiving messages
         while let Some(cmd) = rx.recv().await {
             // use Command::*;
             match cmd {
